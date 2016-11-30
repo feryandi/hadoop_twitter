@@ -9,6 +9,7 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 import org.apache.hadoop.io.DoubleWritable;
+import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.Writable;
 
@@ -18,44 +19,44 @@ import org.apache.hadoop.io.Writable;
  */
 public class UserWritable implements Writable {
     private DoubleWritable pageRank;
-    private Text following; 
+    private Text followee; 
     
     public UserWritable() {
         pageRank = new DoubleWritable(1);
-        following = new Text();
+        followee = new Text();
     }
     
-    public DoubleWritable getPageRank() {
-        return pageRank;
+    public Double getPageRank() {
+        return pageRank.get();
     }
 
-    public void setPageRank(DoubleWritable pageRank) {
-        this.pageRank = pageRank;
-    }
-
-    public Text getFollowing() {
-        return following;
-    }
-    
-    public void set(Double pageRank, Text following) {        
+    public void setPageRank(Double pageRank) {
         this.pageRank = new DoubleWritable(pageRank);
-        this.following = following;
+    }
+    
+    public Text getFollowee() {
+        return followee;
+    }
+    
+    public void set(Double pageRank, Text follower) {        
+        this.pageRank = new DoubleWritable(pageRank);
+        this.followee = follower;
     }
     
     @Override
     public void write(DataOutput d) throws IOException {
         pageRank.write(d);
-        following.write(d);
+        followee.write(d);
     }
 
     @Override
     public void readFields(DataInput di) throws IOException {
         pageRank.readFields(di);
-        following.readFields(di);
+        followee.readFields(di);
     }
     
     @Override
     public String toString() {
-        return pageRank + "\t" + following.toString();
+        return pageRank + "\t" + followee.toString();
     }
 }
