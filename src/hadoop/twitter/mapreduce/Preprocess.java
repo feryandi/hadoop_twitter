@@ -26,56 +26,59 @@ import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
  *
  * @author feryandi
  */
-public class FollowerCount {
+public class Preprocess {
     
-    public static class UserMapper extends Mapper<Object, Text, UserWritable, UserWritable>{
-        private Long user_id;
-        private Long follower_id;
+    public static class UserMapper extends Mapper<LongWritable, Text, Text, UserWritable>{
+        private UserWritable result = new UserWritable();
+        private Text user_id = new Text();
+        private Text follower_id = new Text();
 
         @Override
-        public void map(Object key, Text value, Context context
+        public void map(LongWritable key, Text value, Context context
                       ) throws IOException, InterruptedException {
-            String[] vals = value.toString().split("\\s+");
-            user_id = Long.parseLong(vals[0]);
-            follower_id = Long.parseLong(vals[1]);
+            StringTokenizer itr = new StringTokenizer(value.toString());
             
-            UserWritable k = new UserWritable(follower_id);
-            UserWritable v = new UserWritable(user_id);
+            user_id.set(itr.nextToken());
+            follower_id.set(itr.nextToken());
             
-            context.write(k, v);
+            result.set(new Double(1.0), user_id);
+            context.write(follower_id, result);
         }
     }
     
-    public static class UserReducer extends Reducer<UserWritable, UserWritable, UserWritable, UserWritable> {
+    public static class UserReducer extends Reducer<Text, UserWritable, Text, UserWritable> {
+        private UserWritable result = new UserWritable();
+        
         @Override
-        public void reduce(UserWritable key, Iterable<UserWritable> values, 
+        public void reduce(Text key, Iterable<UserWritable> values, 
                 Context context) throws IOException, InterruptedException {
             Text following = new Text();
             
             for (UserWritable val : values) {
-                String uid = (val.getId()).toString();
-                following.append(uid.getBytes(), 0, uid.length());
+                String appender = val.getFollowing() + ",";
+                following.append(appender.getBytes(), 0, appender.length());
             }
             
-            context.write(new UserWritable(key.getId().get()), new UserWritable(key.getId().get(), new Double(1.0), following));
+            result.set(new Double(1.0), following);
+            context.write(key, result);
         }
     }
     
     public static void main(String[] args) {
         try {
             Configuration conf = new Configuration();
-            Job job = Job.getInstance(conf, "(feryandi) Test MapReduce");
-            job.setJarByClass(FollowerCount.class);
+            Job job = Job.getInstance(conf, "(feryandi) Preprocess");
+            job.setJarByClass(Preprocess.class);
             job.setMapperClass(UserMapper.class);
             job.setCombinerClass(UserReducer.class);
             job.setReducerClass(UserReducer.class);
-            job.setOutputKeyClass(UserWritable.class);
+            job.setOutputKeyClass(Text.class);
             job.setOutputValueClass(UserWritable.class);
             FileInputFormat.addInputPath(job, new Path(args[0]));
             FileOutputFormat.setOutputPath(job, new Path(args[1]));
             System.exit(job.waitForCompletion(true) ? 0 : 1);
         } catch (Exception ex) {
-            Logger.getLogger(FollowerCount.class.getName()).log(Level.SEVERE, null, ex);
+            Logger.getLogger(Preprocess.class.getName()).log(Level.SEVERE, null, ex);
         }
     }
 }
