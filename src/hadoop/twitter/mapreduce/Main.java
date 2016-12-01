@@ -10,6 +10,7 @@ import hadoop.twitter.mapreduce.PageRank.*;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.Job;
@@ -22,26 +23,38 @@ import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
  */
 public class Main {    
     
-    public static void pageRank(String[] args) {
+    private static Configuration conf = new Configuration();
+      
+    public static String userPath(String path) throws Exception {
+        return "/user/feryandi/" + path;
+    }
+    
+    public static void deleteFolder(String path) throws Exception {
+        FileSystem dfs = FileSystem.get(conf);
+        dfs.delete(new Path(path), true);
+    }
+    
+    public static void pageRank(String input, String output) {
         try {
-            Configuration conf = new Configuration();
+            deleteFolder(output);
             Job job = Job.getInstance(conf, "(feryandi) PageRank");
             job.setJarByClass(PageRank.class);
             job.setMapperClass(RankMapper.class);
             job.setReducerClass(RankReducer.class);
             job.setOutputKeyClass(Text.class);
             job.setOutputValueClass(UserWritable.class);
-            FileInputFormat.addInputPath(job, new Path(args[0]));
-            FileOutputFormat.setOutputPath(job, new Path(args[1]));
-            //System.exit(job.waitForCompletion(true) ? 0 : 1);
+            FileInputFormat.addInputPath(job, new Path(input));
+            FileOutputFormat.setOutputPath(job, new Path(output));         
+            while(job.waitForCompletion(true) ? false : true) {}
+            deleteFolder(input);
         } catch (Exception ex) {
             Logger.getLogger(Main.class.getName()).log(Level.SEVERE, null, ex);
         }
     }
     
-    public static void preProcess(String[] args) {
+    public static void preProcess(String input, String output) {
         try {
-            Configuration conf = new Configuration();
+            deleteFolder(output);
             Job job = Job.getInstance(conf, "(feryandi) Preprocess");
             job.setJarByClass(Preprocess.class);
             job.setMapperClass(UserMapper.class);
@@ -49,15 +62,27 @@ public class Main {
             job.setReducerClass(UserReducer.class);
             job.setOutputKeyClass(Text.class);
             job.setOutputValueClass(UserWritable.class);
-            FileInputFormat.addInputPath(job, new Path(args[0]));
-            FileOutputFormat.setOutputPath(job, new Path(args[1]));
-            //System.exit(job.waitForCompletion(true) ? 0 : 1);
+            FileInputFormat.addInputPath(job, new Path(input));
+            FileOutputFormat.setOutputPath(job, new Path(output));            
+            while(job.waitForCompletion(true) ? false : true) {}
         } catch (Exception ex) {
             Logger.getLogger(Main.class.getName()).log(Level.SEVERE, null, ex);
         }        
     }
     
     public static void main(String[] args) {
+        String raw_data = args[0];
+        String output_data = args[1];
+        try {
+            deleteFolder(output_data);
+            
+            preProcess(raw_data, userPath("out_preprocess"));
+            pageRank(userPath("out_preprocess"), userPath("out_pagerank_1"));
+            pageRank(userPath("out_pagerank_1"), userPath("out_pagerank_2"));
+            pageRank(userPath("out_pagerank_2"), output_data);
+        } catch (Exception ex) {
+            Logger.getLogger(Main.class.getName()).log(Level.SEVERE, null, ex);
+        }
     }
     
 }

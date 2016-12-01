@@ -7,6 +7,7 @@ package hadoop.twitter.mapreduce;
 
 import java.io.IOException;
 import java.util.StringTokenizer;
+import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.Mapper;
 import org.apache.hadoop.mapreduce.Reducer;
@@ -16,29 +17,33 @@ import org.apache.hadoop.mapreduce.Reducer;
  * @author feryandi
  */
 public class PageRank {
-    
-    public static class RankMapper extends Mapper<Object, Text, Text, UserWritable>{
+        
+    public static class RankMapper extends Mapper<LongWritable, Text, Text, UserWritable>{
         private UserWritable result = new UserWritable();
         private Text user_id = new Text();
         private Text page_rank = new Text();
         private Text followees = new Text();
         private Text followee = new Text();
-
-        public void map(Object key, Text value, Reducer.Context context
+        
+        @Override
+        public void map(LongWritable key, Text value, Context context
                       ) throws IOException, InterruptedException {
             StringTokenizer itr = new StringTokenizer(value.toString());
             
             user_id.set(itr.nextToken());
             page_rank.set(itr.nextToken());
-            followees.set(itr.nextToken());      
-            String[] list_followee = (followees.toString()).split(",");      
-                        
-            result.set(Double.parseDouble(page_rank.toString())/list_followee.length, followees);
+            followees.set(itr.nextToken());
+            String[] list_followee = (followees.toString()).split(",");
+            
+            result.set((Double) 0.0, followees);
             context.write(user_id, result);
             
+            result.set(Double.parseDouble(page_rank.toString())/list_followee.length, new Text());
             for(String f: list_followee) {
                 followee.set(f);
-                context.write(followee, result);
+                if (!followee.equals(0)) {
+                    context.write(followee, result);
+                }
             }
         }
     }
@@ -47,14 +52,18 @@ public class PageRank {
         private UserWritable result = new UserWritable();
         private Text followees = new Text();
         
+        @Override
         public void reduce(Text key, Iterable<UserWritable> values, 
-                Reducer.Context context) throws IOException, InterruptedException {
+                Context context) throws IOException, InterruptedException {
             Double d = 0.85;
             Double rank = 1 - d;
-                        
+            
             for (UserWritable val : values) {
-                followees.set(val.getFollowee());
-                rank += (val.getPageRank()) * d; 
+                if (!val.getFollowee().equals(new Text())) {
+                    followees.set(val.getFollowee());
+                } else {
+                    rank += (val.getPageRank()) * d; 
+                }
             }
             
             result.set(rank, followees);
