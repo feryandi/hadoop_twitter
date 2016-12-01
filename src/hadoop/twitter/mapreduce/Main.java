@@ -34,13 +34,14 @@ public class Main {
         dfs.delete(new Path(path), true);
     }
     
-    public static void pageRank(String input, String output) {
+    public static void pageRank(String name, String input, String output) {
         try {
             deleteFolder(output);
-            Job job = Job.getInstance(conf, "(feryandi) PageRank");
+            Job job = Job.getInstance(conf, "(feryandi) " + name);
             job.setJarByClass(PageRank.class);
             job.setMapperClass(RankMapper.class);
             job.setReducerClass(RankReducer.class);
+            job.setNumReduceTasks(4);
             job.setOutputKeyClass(Text.class);
             job.setOutputValueClass(UserWritable.class);
             FileInputFormat.addInputPath(job, new Path(input));
@@ -52,14 +53,15 @@ public class Main {
         }
     }
     
-    public static void preProcess(String input, String output) {
+    public static void preProcess(String name, String input, String output) {
         try {
             deleteFolder(output);
-            Job job = Job.getInstance(conf, "(feryandi) Preprocess");
+            Job job = Job.getInstance(conf, "(feryandi) " + name);
             job.setJarByClass(Preprocess.class);
             job.setMapperClass(UserMapper.class);
             job.setCombinerClass(UserReducer.class);
             job.setReducerClass(UserReducer.class);
+            job.setNumReduceTasks(8);
             job.setOutputKeyClass(Text.class);
             job.setOutputValueClass(UserWritable.class);
             FileInputFormat.addInputPath(job, new Path(input));
@@ -76,10 +78,10 @@ public class Main {
         try {
             deleteFolder(output_data);
             
-            preProcess(raw_data, userPath("out_preprocess"));
-            pageRank(userPath("out_preprocess"), userPath("out_pagerank_1"));
-            pageRank(userPath("out_pagerank_1"), userPath("out_pagerank_2"));
-            pageRank(userPath("out_pagerank_2"), output_data);
+            preProcess("PreProcess", raw_data, userPath("out_preprocess"));
+            pageRank("PageRank #1", userPath("out_preprocess"), userPath("out_pagerank_1"));
+            pageRank("PageRank #2", userPath("out_pagerank_1"), userPath("out_pagerank_2"));
+            pageRank("PageRank #3", userPath("out_pagerank_2"), output_data);
         } catch (Exception ex) {
             Logger.getLogger(Main.class.getName()).log(Level.SEVERE, null, ex);
         }

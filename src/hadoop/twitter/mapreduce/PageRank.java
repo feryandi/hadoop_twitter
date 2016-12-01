@@ -21,8 +21,8 @@ public class PageRank {
     public static class RankMapper extends Mapper<LongWritable, Text, Text, UserWritable>{
         private UserWritable result = new UserWritable();
         private Text user_id = new Text();
-        private Text page_rank = new Text();
-        private Text followees = new Text();
+        private Text page_rank = new Text("1");
+        private Text followees = new Text(",");
         private Text followee = new Text();
         
         @Override
@@ -31,9 +31,16 @@ public class PageRank {
             StringTokenizer itr = new StringTokenizer(value.toString());
             
             user_id.set(itr.nextToken());
-            page_rank.set(itr.nextToken());
-            followees.set(itr.nextToken());
-            String[] list_followee = (followees.toString()).split(",");
+            
+            if (itr.hasMoreTokens()) {
+                page_rank.set(itr.nextToken());
+            }
+            
+            String[] list_followee = new String[0];
+            if (itr.hasMoreTokens()) {
+                followees.set(itr.nextToken());
+                list_followee = (followees.toString()).split(",");
+            }
             
             result.set((Double) 0.0, followees);
             context.write(user_id, result);
