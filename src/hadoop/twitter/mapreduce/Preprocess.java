@@ -17,6 +17,7 @@ import org.apache.hadoop.mapreduce.Reducer;
  * @author feryandi
  */
 public class Preprocess {
+    static final Double initialPageRank = 1.00;
     
     public static class UserMapper extends Mapper<LongWritable, Text, Text, UserWritable>{
         private UserWritable result = new UserWritable();
@@ -32,10 +33,10 @@ public class Preprocess {
             follower_id.set(itr.nextToken());
             
             // In order to make id that has no following appear
-            result.set(new Double(1.0), new Text());
+            result.set(new Double(initialPageRank), new Text());
             context.write(user_id, result);
             
-            result.set(new Double(1.0), user_id);
+            result.set(new Double(initialPageRank), user_id);
             context.write(follower_id, result);
         }
     }
@@ -59,7 +60,7 @@ public class Preprocess {
                 followee.set(",");
             }
             
-            result.set(new Double(1.0), followee);
+            result.set(new Double(initialPageRank), followee);
             context.write(key, result);
         }
     }
